@@ -1,39 +1,30 @@
 // @ts-nocheck
-const https = require('https');
+const axios = require('axios');
 const {getUrlName, getQueryParams, addHttpsProtocolIfNotExist, isValidUrl} = require('../utils/url.utils');
 
 /**
  * This function extracts the the text inside the title tag from html.
  * @param {*} html - The html data passed.
- * @param {*} callback - The function executed after execution finishes.
- * @returns callback functions.
+ * @returns title.
  */
-const scrapeTitle = (html, callback) => {
+const scrapeTitle = (html) => {
     try {
         const title = html.split('<title>')[1].split('</title>')[0];
-        return callback(title);
+        return title;
     } catch (error) {
-        return callback('NO RESPONSE');
+        return 'NO RESPONSE';
     }
 }
 
 /**
  * This function calls get method of the http request with the specified url.
  * @param {*} url - The url of the website
- * @param {*} callback - The function executed after execution finishes.
  */
-const getRequest = (url, callback) => {
-    var str = '';
-
-    https.get(url, function(res) {
-        res.on('data', function (body) {
-            str += body;
-        });
-
-        res.on('end', function () {
-            return callback(str);
-        });
-    });
+const getRequest = async (url) => {
+    const response = await axios.get(url, {headers: {
+        "Accept-Encoding": "gzip,deflate,compress"
+        }});
+    return response;
 }
 
 /**
@@ -66,7 +57,7 @@ const prepareHTMLResponse = (mappedTitles) => {
  * @param {*} res - Http response
  * @returns 
  */
-const requestHandler = (req, res) => {
+const requestHandler = async (req, res) => {
     const {url, method} = req;
 
     if(getUrlName(url) === '/I/want/title' && method === 'GET') {
@@ -77,39 +68,29 @@ const requestHandler = (req, res) => {
 
             for(let [index, url] of address.entries()) {
                 if(isValidUrl(url)) {
-                    console.log('[url]', url);
-                    addHttpsProtocolIfNotExist(url, (urlWithProtocol) => {
-                        getRequest(urlWithProtocol, (response) => {
-                            scrapeTitle(response, (title) => {
-                                mappedTitles.push({address: address[index], title});
-    
-                                if(mappedTitles.length === address.length) {
-                                    handleSuccessResponse(res, mappedTitles);
-                                }
-                            });
-                        });
-                    });                    
+                    let urlWithProtocol = await addHttpsProtocolIfNotExist(url);
+                    let {data} = await getRequest(urlWithProtocol);
+                    let title = await scrapeTitle(data);
+                    
+                    mappedTitles.push({address: address[index], title});
                 }else {
                     mappedTitles.push({address: address[index], title: 'NO RESPONSE'});
-                    if(mappedTitles.length === address.length) {
-                        handleSuccessResponse(res, mappedTitles);
-                    }
+                }
+                if(mappedTitles.length === address.length) {
+                    handleSuccessResponse(res, mappedTitles);
                 }
             }
         }else if(address) {
             if(isValidUrl(address)) {
-                addHttpsProtocolIfNotExist(address, (urlWithProtocol) => {
-                    getRequest(urlWithProtocol, (response) => {
-                        scrapeTitle(response, (title) => {
-                            mappedTitles.push({address, title});
-                            handleSuccessResponse(res, mappedTitles);
-                        });
-                    });
-                });
+                let urlWithProtocol = await addHttpsProtocolIfNotExist(address);
+                let {data} = await getRequest(urlWithProtocol);
+                let title = await scrapeTitle(data);
+                
+                mappedTitles.push({address, title});
             } else {
                 mappedTitles.push({address, title: 'NO RESPONSE'});
-                handleSuccessResponse(res, mappedTitles);
             }
+            handleSuccessResponse(res, mappedTitles);
         }else {
             return handle404(res);
         }

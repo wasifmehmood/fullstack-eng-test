@@ -8,10 +8,10 @@ const getUrlName = (reqUrl) => {
     return url.parse(reqUrl, true).pathname;
 }
 
-const addHttpsProtocolIfNotExist = (reqUrl, callback) => {
-    if(!url.parse(reqUrl, true).protocol) return callback(`https://${reqUrl}`);
-    if(url.parse(reqUrl, true).protocol === 'http:') return callback(reqUrl.replace('http', 'https'));
-    return callback(reqUrl);
+const addHttpsProtocolIfNotExist = (reqUrl) => {
+    if(!url.parse(reqUrl, true).protocol) return `https://${reqUrl}`;
+    if(url.parse(reqUrl, true).protocol === 'http:') return reqUrl.replace('http', 'https');
+    return reqUrl;
 }
 
 const isValidUrl = urlString => {
