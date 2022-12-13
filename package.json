@@ -17,6 +17,8 @@
   },
   "homepage": "https://github.com/wasifmehmood/fullstack-eng-test#readme",
   "dependencies": {
-    "axios": "^1.2.1"
+    "axios": "^1.2.1",
+    "axios-observable": "^2.0.0",
+    "rxjs": "^7.6.0"
   }
 }

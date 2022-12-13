@@ -1,5 +1,6 @@
 // @ts-nocheck
-const axios = require('axios');
+const Axios = require('axios-observable').Axios;
+const { combineLatest, of } = require('rxjs');
 const {getUrlName, getQueryParams, addHttpsProtocolIfNotExist, isValidUrl} = require('../utils/url.utils');
 
 /**
@@ -20,11 +21,10 @@ const scrapeTitle = (html) => {
  * This function calls get method of the http request with the specified url.
  * @param {*} url - The url of the website
  */
-const getRequest = async (url) => {
-    const response = await axios.get(url, {headers: {
+const getRequest = (url) => {
+    return Axios.get(url, {headers: {
         "Accept-Encoding": "gzip,deflate,compress"
-        }});
-    return response;
+    }});
 }
 
 /**
@@ -67,33 +67,40 @@ const requestHandler = async (req, res) => {
                 return {value, isValid: isValidUrl(value)};
             });
 
-            const allPromises = validatedAddresses.map(address => address.isValid ? getRequest(addHttpsProtocolIfNotExist(address.value)) : new Promise((resolve, reject) => reject({config: {url: address.value}, reason: 'Invalid URL'})));
-
-            Promise.allSettled(allPromises).then((responses) => {
-
-                for(let response of responses) {
-                    if(response.status === 'fulfilled') {
-                        const { data, config: {url} } = response.value;
-                        let title = scrapeTitle(data);
-                        mappedTitles.push({address: url, title});
-                    } else if(response.status === 'rejected') {
-                        const { reason: {config: {url}} } = response;
-                        mappedTitles.push({address: url, title: 'NO RESPONSE'});
+            const allObs = validatedAddresses.map(address => address.isValid ? getRequest(addHttpsProtocolIfNotExist(address.value)) : of({config: {url: address.value}, reason: 'Invalid URL'}));
+            combineLatest(allObs).subscribe({
+                next: responses => {
+                    for(let response of responses) {
+                        if(response.status === 200) {
+                            const { data, config: {url} } = response;
+                            let title = scrapeTitle(data);
+                            mappedTitles.push({address: url, title});
+                        } else {
+                            const { config: {url} } = response;
+                            mappedTitles.push({address: url, title: 'NO RESPONSE'});
+                        }
                     }
-                }
-                handleSuccessResponse(res, mappedTitles);         
-            })
-        }else if(address) {
-            if(isValidUrl(address)) {
-                getRequest(addHttpsProtocolIfNotExist(address)).then((request) => {
-                    const { data, config: {url} } = request;
-                    let title = scrapeTitle(data);
-                    mappedTitles.push({address: url, title});
-                    handleSuccessResponse(res, mappedTitles);                  
-                }).catch(() => {
+                    handleSuccessResponse(res, mappedTitles);         
+                },
+                error: e => {
                     mappedTitles.push({address, title: 'NO RESPONSE'});
                     handleSuccessResponse(res, mappedTitles);
-                });
+                }
+            });
+        }else if(address) {
+            if(isValidUrl(address)) {
+                getRequest(addHttpsProtocolIfNotExist(address)).subscribe(
+                    {next: response => {
+                        const { data, config: {url} } = response;
+                        let title = scrapeTitle(data);
+                        mappedTitles.push({address: url, title});
+                        handleSuccessResponse(res, mappedTitles);
+                    },
+                    error: e => {
+                        mappedTitles.push({address, title: 'NO RESPONSE'});
+                        handleSuccessResponse(res, mappedTitles);
+                    }}
+                )
             } else {
                 mappedTitles.push({address, title: 'NO RESPONSE'});
                 handleSuccessResponse(res, mappedTitles);
