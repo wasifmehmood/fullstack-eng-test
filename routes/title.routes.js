@@ -22,7 +22,7 @@ const scrapeTitle = (html, callback) => {
  * @param {*} url - The url of the website
  * @param {*} callback - The function executed after execution finishes.
  */
-const getRequest = (url, callback) => {
+const getRequest = (url, callback, error) => {
     var str = '';
 
     https.get(url, function(res) {
@@ -33,6 +33,9 @@ const getRequest = (url, callback) => {
         res.on('end', function () {
             return callback(str);
         });
+
+    }).on('error', function(err){
+        return error('Invalid URL');
     });
 }
 
@@ -51,9 +54,7 @@ const prepareHTMLResponse = (mappedTitles) => {
 
         <ul>
         ${
-            mappedTitles.map((value) => {
-                return `<li>${value.address} - "${value.title}"</li>`
-            })
+            mappedTitles.map((value) => `<li>${value.address} - "${value.title}"</li>`).join('')
         }
         </ul>
         </body>
@@ -77,7 +78,6 @@ const requestHandler = (req, res) => {
 
             for(let [index, url] of address.entries()) {
                 if(isValidUrl(url)) {
-                    console.log('[url]', url);
                     addHttpsProtocolIfNotExist(url, (urlWithProtocol) => {
                         getRequest(urlWithProtocol, (response) => {
                             scrapeTitle(response, (title) => {
@@ -87,6 +87,12 @@ const requestHandler = (req, res) => {
                                     handleSuccessResponse(res, mappedTitles);
                                 }
                             });
+                        }, ()=>{
+                            mappedTitles.push({address: address[index], title: 'NO RESPONSE'});
+    
+                            if(mappedTitles.length === address.length) {
+                                handleSuccessResponse(res, mappedTitles);
+                            }
                         });
                     });                    
                 }else {
@@ -104,6 +110,9 @@ const requestHandler = (req, res) => {
                             mappedTitles.push({address, title});
                             handleSuccessResponse(res, mappedTitles);
                         });
+                    }, () => {
+                        mappedTitles.push({address, title: 'NO RESPONSE'});
+                        handleSuccessResponse(res, mappedTitles);                    
                     });
                 });
             } else {
