@@ -1,7 +1,7 @@
 // @ts-nocheck
 const Axios = require('axios-observable').Axios;
 const { combineLatest, of } = require('rxjs');
-const {getUrlName, getQueryParams, addHttpsProtocolIfNotExist, isValidUrl} = require('../utils/url.utils');
+const {getUrlName, getQueryParams, addHttpsProtocolIfNotExist, isValidUrl} = require('../utils');
 
 /**
  * This function extracts the the text inside the title tag from html.
