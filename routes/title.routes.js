@@ -42,9 +42,7 @@ const prepareHTMLResponse = (mappedTitles) => {
 
         <ul>
         ${
-            mappedTitles.map((value) => {
-                return `<li>${value.address} - "${value.title}"</li>`
-            })
+            mappedTitles.map((value) => `<li>${value.address} - "${value.title}"</li>`).join('')
         }
         </ul>
         </body>
@@ -68,11 +66,16 @@ const requestHandler = async (req, res) => {
 
             for(let [index, url] of address.entries()) {
                 if(isValidUrl(url)) {
-                    let urlWithProtocol = await addHttpsProtocolIfNotExist(url);
-                    let {data} = await getRequest(urlWithProtocol);
-                    let title = await scrapeTitle(data);
-                    
-                    mappedTitles.push({address: address[index], title});
+                    try {
+                        let urlWithProtocol = await addHttpsProtocolIfNotExist(url);
+                        let {data} = await getRequest(urlWithProtocol);
+                        let title = await scrapeTitle(data);
+                        
+                        mappedTitles.push({address: address[index], title});    
+                    } catch (error) {
+                        mappedTitles.push({address: address[index], title: 'NO RESPONSE'});                        
+                    }
+
                 }else {
                     mappedTitles.push({address: address[index], title: 'NO RESPONSE'});
                 }
@@ -82,11 +85,15 @@ const requestHandler = async (req, res) => {
             }
         }else if(address) {
             if(isValidUrl(address)) {
-                let urlWithProtocol = await addHttpsProtocolIfNotExist(address);
-                let {data} = await getRequest(urlWithProtocol);
-                let title = await scrapeTitle(data);
-                
-                mappedTitles.push({address, title});
+                try {
+                    let urlWithProtocol = await addHttpsProtocolIfNotExist(address);
+                    let {data} = await getRequest(urlWithProtocol);
+                    let title = await scrapeTitle(data);
+                    
+                    mappedTitles.push({address, title});   
+                } catch (error) {
+                    mappedTitles.push({address, title: 'NO RESPONSE'});
+                }
             } else {
                 mappedTitles.push({address, title: 'NO RESPONSE'});
             }
