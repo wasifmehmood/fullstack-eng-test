@@ -42,9 +42,7 @@ const prepareHTMLResponse = (mappedTitles) => {
 
         <ul>
         ${
-            mappedTitles.map((value) => {
-                return `<li>${value.address} - "${value.title}"</li>`
-            })
+            mappedTitles.map((value) => `<li>${value.address} - "${value.title}"</li>`).join('')
         }
         </ul>
         </body>
@@ -65,32 +63,41 @@ const requestHandler = async (req, res) => {
         const mappedTitles = [];
 
         if(Array.isArray(address)) {
+            const validatedAddresses = address.map((value) => {
+                return {value, isValid: isValidUrl(value)};
+            });
 
-            for(let [index, url] of address.entries()) {
-                if(isValidUrl(url)) {
-                    let urlWithProtocol = await addHttpsProtocolIfNotExist(url);
-                    let {data} = await getRequest(urlWithProtocol);
-                    let title = await scrapeTitle(data);
-                    
-                    mappedTitles.push({address: address[index], title});
-                }else {
-                    mappedTitles.push({address: address[index], title: 'NO RESPONSE'});
+            const allPromises = validatedAddresses.map(address => address.isValid ? getRequest(addHttpsProtocolIfNotExist(address.value)) : new Promise((resolve, reject) => reject({config: {url: address.value}, reason: 'Invalid URL'})));
+
+            Promise.allSettled(allPromises).then((responses) => {
+
+                for(let response of responses) {
+                    if(response.status === 'fulfilled') {
+                        const { data, config: {url} } = response.value;
+                        let title = scrapeTitle(data);
+                        mappedTitles.push({address: url, title});
+                    } else if(response.status === 'rejected') {
+                        const { reason: {config: {url}} } = response;
+                        mappedTitles.push({address: url, title: 'NO RESPONSE'});
+                    }
                 }
-                if(mappedTitles.length === address.length) {
-                    handleSuccessResponse(res, mappedTitles);
-                }
-            }
+                handleSuccessResponse(res, mappedTitles);         
+            })
         }else if(address) {
             if(isValidUrl(address)) {
-                let urlWithProtocol = await addHttpsProtocolIfNotExist(address);
-                let {data} = await getRequest(urlWithProtocol);
-                let title = await scrapeTitle(data);
-                
-                mappedTitles.push({address, title});
+                getRequest(addHttpsProtocolIfNotExist(address)).then((request) => {
+                    const { data, config: {url} } = request;
+                    let title = scrapeTitle(data);
+                    mappedTitles.push({address: url, title});
+                    handleSuccessResponse(res, mappedTitles);                  
+                }).catch(() => {
+                    mappedTitles.push({address, title: 'NO RESPONSE'});
+                    handleSuccessResponse(res, mappedTitles);
+                });
             } else {
                 mappedTitles.push({address, title: 'NO RESPONSE'});
+                handleSuccessResponse(res, mappedTitles);
             }
-            handleSuccessResponse(res, mappedTitles);
         }else {
             return handle404(res);
         }
