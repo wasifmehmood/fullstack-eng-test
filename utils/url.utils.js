@@ -1,19 +1,39 @@
 const url = require('url');
 
+/**
+ * This function extracts the query parameters from the url.
+ * @param {*} reqUrl 
+ * @returns 
+ */
 const getQueryParams = (reqUrl) => {
     return url.parse(reqUrl, true).query;
 }
 
+/**
+ * This function extracts the url path from the whole url.
+ * @param {*} reqUrl 
+ * @returns 
+ */
 const getUrlName = (reqUrl) => {
     return url.parse(reqUrl, true).pathname;
 }
 
+/**
+ * This function adds the https:// to start if not exist or replace the http with https.
+ * @param {*} reqUrl 
+ * @returns 
+ */
 const addHttpsProtocolIfNotExist = (reqUrl, callback) => {
     if(!url.parse(reqUrl, true).protocol) return callback(`https://${reqUrl}`);
     if(url.parse(reqUrl, true).protocol === 'http:') return callback(reqUrl.replace('http', 'https'));
     return callback(reqUrl);
 }
 
+/**
+ * This function checks for the url validity.
+ * @param {*} urlString 
+ * @returns 
+ */
 const isValidUrl = urlString => {
     var urlPattern = new RegExp('^(https?:\\/\\/)?'+ // validate protocol
   '((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.)+[a-z]{2,}|'+ // validate domain name
