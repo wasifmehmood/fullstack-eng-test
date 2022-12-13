@@ -1,5 +1,4 @@
-const { getUrlName } = require('../utils');
-const { getTitle } = require('../controllers/index');
+const { getTitle } = require('../controllers');
 
 /**
  * This function handle all the routes on the server.

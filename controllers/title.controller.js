@@ -2,7 +2,7 @@ const Axios = require('axios-observable').Axios;
 const { combineLatest, of, catchError, map } = require('rxjs');
 const { getQueryParams, addHttpsProtocolIfNotExist, isValidUrl } = require('../utils');
 const { handleSuccessResponse, handle404, HTTP_CODES } = require('../responses');
-const { constants } = require('../config/contant');
+const { constants } = require('../config/constant');
 
 /**
  * This function extracts the the text inside the title tag from html.
