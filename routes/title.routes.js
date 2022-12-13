@@ -1,6 +1,6 @@
 // @ts-nocheck
 const axios = require('axios');
-const {getUrlName, getQueryParams, addHttpsProtocolIfNotExist, isValidUrl} = require('../utils/url.utils');
+const {getUrlName, getQueryParams, addHttpsProtocolIfNotExist, isValidUrl} = require('../utils');
 
 /**
  * This function extracts the the text inside the title tag from html.
